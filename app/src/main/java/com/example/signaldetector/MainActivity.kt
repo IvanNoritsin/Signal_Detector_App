@@ -6,58 +6,127 @@ import android.location.Location
 import android.location.LocationListener
 import android.location.LocationManager
 import android.os.Bundle
+import android.telephony.*
+import android.util.Log
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
 
 class MainActivity : AppCompatActivity() {
 
     private lateinit var latitudeTextView: TextView
     private lateinit var longitudeTextView: TextView
+    private lateinit var networkDataTextView: TextView
+    private lateinit var tm: TelephonyManager
     private lateinit var locationManager: LocationManager
-    private val locationListener = object : LocationListener {
-        override fun onLocationChanged(location: Location) {
-            val latitude = location.latitude
-            val longitude = location.longitude
-            latitudeTextView.text = "$latitude"
-            longitudeTextView.text = "$longitude"
+    private var phoneStateListener: PhoneStateListener? = null
+
+    fun getNetworkData() {
+        phoneStateListener = object : PhoneStateListener() {
+            override fun onSignalStrengthsChanged(signalStrength: SignalStrength) {
+                if (ActivityCompat.checkSelfPermission(
+                        this@MainActivity,
+                        Manifest.permission.ACCESS_FINE_LOCATION
+                    ) != PackageManager.PERMISSION_GRANTED) {
+                    return
+                }
+
+                val infoList = tm.allCellInfo
+                val cellSignalStrengths = signalStrength.cellSignalStrengths
+                val cellSignalStrength = cellSignalStrengths[0]
+
+                for (i in infoList.indices) {
+                    val cellInfo = infoList[i]
+
+                    when (cellInfo) {
+                        is CellInfoLte -> {
+                            val cellSignalStrengthLte = if (i == 0) {
+                                cellSignalStrength as CellSignalStrengthLte
+                            } else {
+                                cellInfo.cellSignalStrength
+                            }
+                            val cellIdentityLte = cellInfo.cellIdentity
+
+                            val rsrpLte = cellSignalStrengthLte.rsrp
+                            val rsrqLte = cellSignalStrengthLte.rsrq
+                            val rssiLte = cellSignalStrengthLte.rssi
+                            val asuLevelLte = cellSignalStrengthLte.asuLevel
+                            val levelLte = cellSignalStrengthLte.level
+                            val registeredLte = cellInfo.isRegistered
+                            val operatorLte = cellIdentityLte.operatorAlphaShort
+                            val mncLte = cellIdentityLte.mncString
+                            val mccLte = cellIdentityLte.mccString
+                            val bandwidthLte = cellIdentityLte.bandwidth
+                            Log.d("df", "$cellSignalStrengthLte")
+
+                            if (i == 0) {
+                                var interfaceApp = ""
+                                interfaceApp += "Technology: LTE\n\n\n"
+                                interfaceApp += "RSRP: $rsrpLte\n\n"
+                                interfaceApp += "RSRQ: $rsrqLte\n\n"
+                                interfaceApp += "RSSI: $rssiLte\n\n"
+                                interfaceApp += "ASU Level: $asuLevelLte\n\n"
+                                interfaceApp += "Level: $levelLte\n\n\n"
+                                interfaceApp += "Operator: $operatorLte\n\n"
+                                interfaceApp += "Mnc: $mncLte\n\n"
+                                interfaceApp += "Mcc: $mccLte\n\n"
+                                interfaceApp += "Bandwidth: $bandwidthLte\n\n"
+                                networkDataTextView.text = interfaceApp
+                                interfaceApp = ""
+                            }
+                        }
+                    }
+                }
+            }
         }
 
-        override fun onStatusChanged(provider: String?, status: Int, extras: Bundle?) {}
-        override fun onProviderEnabled(provider: String) {}
-        override fun onProviderDisabled(provider: String) {
-            Toast.makeText(this@MainActivity, "Провайдер отключен", Toast.LENGTH_SHORT).show()
-        }
+        tm.listen(phoneStateListener, PhoneStateListener.LISTEN_SIGNAL_STRENGTHS)
     }
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_main)
-
-        latitudeTextView = findViewById(R.id.latitude_TextView)
-        longitudeTextView = findViewById(R.id.longitude_TextView)
+    fun getLocationData() {
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            return
+        }
 
         locationManager = getSystemService(LOCATION_SERVICE) as LocationManager
 
-        requestLocationPermission()
-    }
+        val locationListener = object : LocationListener {
+            override fun onLocationChanged(location: Location) {
+                latitudeTextView.text = "${location.latitude}"
+                longitudeTextView.text = "${location.longitude}"
+            }
 
-    private fun requestLocationPermission() {
-        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED &&
-            ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.ACCESS_FINE_LOCATION), 1)
-        } else {
-            getLocation()
+            override fun onStatusChanged(provider: String?, status: Int, extras: Bundle?) {}
+            override fun onProviderEnabled(provider: String) {}
+            override fun onProviderDisabled(provider: String) {}
         }
+        locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 0L, 0f, locationListener)
     }
 
-    private fun getLocation() {
-        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED ||
-            ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+    private fun requestPermissions() {
+        val permissionsToRequest = mutableListOf<String>()
 
-            locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 0L, 0f, locationListener)
-            locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 0L, 0f, locationListener)
+        if (ContextCompat.checkSelfPermission(
+                this, Manifest.permission.READ_PHONE_STATE
+            ) != PackageManager.PERMISSION_GRANTED
+        ) {
+            permissionsToRequest.add(Manifest.permission.READ_PHONE_STATE)
+        }
+
+        if (ContextCompat.checkSelfPermission(
+                this, Manifest.permission.ACCESS_FINE_LOCATION
+            ) != PackageManager.PERMISSION_GRANTED
+        ) {
+            permissionsToRequest.add(Manifest.permission.ACCESS_FINE_LOCATION)
+        }
+
+        if (permissionsToRequest.isNotEmpty()) {
+            ActivityCompat.requestPermissions(this, permissionsToRequest.toTypedArray(), 1)
+        } else {
+            getNetworkData()
+            getLocationData()
         }
     }
 
@@ -68,16 +137,33 @@ class MainActivity : AppCompatActivity() {
     ) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         if (requestCode == 1) {
-            if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                getLocation()
+            if (grantResults.isNotEmpty() && grantResults.all { it == PackageManager.PERMISSION_GRANTED }) {
+                getNetworkData()
+                getLocationData()
             } else {
-                Toast.makeText(this, "Разрешение не предоставлено", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, "Не все разрешения предоставлены", Toast.LENGTH_SHORT).show()
             }
         }
     }
 
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setContentView(R.layout.activity_main)
+
+        latitudeTextView = findViewById(R.id.latitude_TextView)
+        longitudeTextView = findViewById(R.id.longitude_TextView)
+        networkDataTextView = findViewById(R.id.networkData_TextView)
+
+        tm = getSystemService(TELEPHONY_SERVICE) as TelephonyManager
+
+        requestPermissions()
+    }
+
     override fun onDestroy() {
         super.onDestroy()
-        locationManager.removeUpdates(locationListener)
+        phoneStateListener?.let {
+            tm.listen(it, PhoneStateListener.LISTEN_NONE)
+        }
+        locationManager.removeUpdates {  }
     }
 }
