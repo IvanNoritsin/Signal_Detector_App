@@ -3,9 +3,10 @@ package com.example.signaldetector
 import android.os.Bundle
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
-import com.example.signaldetector.helpers.Location
-import com.example.signaldetector.helpers.NetworkData
-import com.example.signaldetector.helpers.Permissions
+import com.example.signaldetector.modules.DataLogger
+import com.example.signaldetector.modules.Location
+import com.example.signaldetector.modules.NetworkData
+import com.example.signaldetector.modules.Permissions
 
 class MainActivity : AppCompatActivity() {
 
@@ -15,6 +16,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var location: Location
     private lateinit var networkData: NetworkData
     private lateinit var permissions: Permissions
+    private lateinit var dataLogger: DataLogger
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -23,9 +25,10 @@ class MainActivity : AppCompatActivity() {
         latitudeTextView = findViewById(R.id.latitude_TextView)
         longitudeTextView = findViewById(R.id.longitude_TextView)
         networkDataTextView = findViewById(R.id.networkData_TextView)
+        dataLogger = DataLogger()
 
-        location = Location(this, latitudeTextView, longitudeTextView)
-        networkData = NetworkData(this, networkDataTextView)
+        location = Location(this, latitudeTextView, longitudeTextView, dataLogger)
+        networkData = NetworkData(this, networkDataTextView, dataLogger)
         permissions = Permissions(this)
 
         permissions.requestPermissions {
@@ -40,3 +43,4 @@ class MainActivity : AppCompatActivity() {
         location.stopLocationUpdates()
     }
 }
+

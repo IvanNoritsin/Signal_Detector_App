@@ -1,4 +1,4 @@
-package com.example.signaldetector.helpers
+package com.example.signaldetector.modules
 
 import android.Manifest
 import android.content.pm.PackageManager

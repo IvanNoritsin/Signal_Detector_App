@@ -1,4 +1,4 @@
-package com.example.signaldetector.helpers
+package com.example.signaldetector.modules
 
 import android.Manifest
 import android.content.Context
@@ -14,8 +14,12 @@ import androidx.appcompat.app.AppCompatActivity
 class Location(
     private val activity: AppCompatActivity,
     private val latitudeTextView: TextView,
-    private val longitudeTextView: TextView
+    private val longitudeTextView: TextView,
+    private val dataLogger: DataLogger
 ) {
+
+    private var latitude: Double = 0.0
+    private var longitude: Double = 0.0
 
     private val locationManager: LocationManager by lazy {
         activity.getSystemService(Context.LOCATION_SERVICE) as LocationManager
@@ -23,8 +27,12 @@ class Location(
 
     private val locationListener = object : LocationListener {
         override fun onLocationChanged(location: Location) {
-            latitudeTextView.text = "${location.latitude}"
-            longitudeTextView.text = "${location.longitude}"
+            latitude = location.latitude
+            longitude = location.longitude
+            latitudeTextView.text = "$latitude"
+            longitudeTextView.text = "$longitude"
+
+            dataLogger.updateLocation(latitude, longitude)
         }
 
         override fun onStatusChanged(provider: String?, status: Int, extras: Bundle?) {}
