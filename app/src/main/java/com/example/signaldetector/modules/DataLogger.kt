@@ -99,4 +99,11 @@ class DataLogger(private val interval: Long = 5000) {
             Log.e("DataLogger", "Непредвиденная ошибка", e)
         }
     }
+
+    fun clearJsonObject() {
+        jsonAllInfo.keys().forEach { key ->
+            jsonAllInfo.remove(key)
+        }
+        Log.d("DataLogger", "JSON объект очищен")
+    }
 }

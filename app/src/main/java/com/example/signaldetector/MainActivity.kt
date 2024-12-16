@@ -7,6 +7,7 @@ import com.example.signaldetector.modules.DataLogger
 import com.example.signaldetector.modules.Location
 import com.example.signaldetector.modules.NetworkData
 import com.example.signaldetector.modules.Permissions
+import com.example.signaldetector.modules.WebSocketSender
 
 class MainActivity : AppCompatActivity() {
 
@@ -17,6 +18,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var networkData: NetworkData
     private lateinit var permissions: Permissions
     private lateinit var dataLogger: DataLogger
+    private lateinit var webSocketSender: WebSocketSender
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -27,6 +29,10 @@ class MainActivity : AppCompatActivity() {
         networkDataTextView = findViewById(R.id.networkData_TextView)
         dataLogger = DataLogger()
 
+        val filePath = "/data/data/com.example.signaldetector/files/network_data.json"
+        val serverUrl = "wss://4f99-45-136-49-30.ngrok-free.app/ws"
+        webSocketSender = WebSocketSender(serverUrl, filePath, dataLogger)
+
         location = Location(this, latitudeTextView, longitudeTextView, dataLogger)
         networkData = NetworkData(this, networkDataTextView, dataLogger)
         permissions = Permissions(this)
@@ -34,6 +40,7 @@ class MainActivity : AppCompatActivity() {
         permissions.requestPermissions {
             networkData.getNetworkData()
             location.getLocationData()
+            webSocketSender.start()
         }
     }
 
@@ -41,6 +48,7 @@ class MainActivity : AppCompatActivity() {
         super.onDestroy()
         networkData.stopListening()
         location.stopLocationUpdates()
+        webSocketSender.stop()
     }
 }
 
