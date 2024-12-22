@@ -30,7 +30,7 @@ class MainActivity : AppCompatActivity() {
         dataLogger = DataLogger()
 
         val filePath = "/data/data/com.example.signaldetector/files/network_data.json"
-        val serverUrl = "wss://4f99-45-136-49-30.ngrok-free.app/ws"
+        val serverUrl = "ws://77.222.43.237:8000/ws"
         webSocketSender = WebSocketSender(serverUrl, filePath, dataLogger)
 
         location = Location(this, latitudeTextView, longitudeTextView, dataLogger)

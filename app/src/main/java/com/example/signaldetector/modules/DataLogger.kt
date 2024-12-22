@@ -2,7 +2,9 @@ package com.example.signaldetector.modules
 
 import android.util.Log
 import org.json.JSONObject
+import java.io.BufferedReader
 import java.io.File
+import java.io.FileReader
 import java.io.FileWriter
 import java.io.IOException
 import java.text.SimpleDateFormat
@@ -34,6 +36,7 @@ class DataLogger(private val interval: Long = 5000) {
     }
 
     fun startLogging() {
+        loadExistingData()
         handler.post(dataLogger)
     }
 
@@ -64,12 +67,41 @@ class DataLogger(private val interval: Long = 5000) {
         this.longitude = lon
     }
 
+    private fun loadExistingData() {
+        val file = File("/data/data/com.example.signaldetector/files/network_data.json")
+        if (file.exists()) {
+            try {
+                val builder = StringBuilder()
+                BufferedReader(FileReader(file)).use { reader ->
+                    var line = reader.readLine()
+                    while (line != null) {
+                        builder.append(line)
+                        line = reader.readLine()
+                    }
+                }
+                val existingData = JSONObject(builder.toString())
+                val keys = existingData.keys()
+                while (keys.hasNext()) {
+                    val key = keys.next()
+                    jsonAllInfo.put(key, existingData.get(key))
+                }
+                Log.d("DataLogger", "Существующие данные загружены: $jsonAllInfo")
+            } catch (e: IOException) {
+                Log.e("DataLogger", "Ошибка чтения файла JSON", e)
+            } catch (e: Exception) {
+                Log.e("DataLogger", "Ошибка обработки JSON файла", e)
+            }
+        } else {
+            Log.d("DataLogger", "Файл network_data.json не найден, создаётся новый объект JSON")
+        }
+    }
+
     private fun writeToJsonLTE(
         rsrpLte: Int, rsrqLte: Int, asuLevelLte: Int, levelLte: Int,
         operatorLte: CharSequence?, mncLte: String?, mccLte: String?
     ) {
         try {
-            if (rsrpLte != 0) {
+            if (rsrpLte != 0 && latitude != 0.0 && longitude != 0.0) {
                 val jsonLteCellInfo = JSONObject().apply {
                     put("rsrpLte", rsrpLte)
                     put("rsrqLte", rsrqLte)

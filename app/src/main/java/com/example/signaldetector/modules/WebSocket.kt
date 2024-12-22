@@ -1,11 +1,11 @@
-package com.example.signaldetector.modules
+package com.example.signaldetector.modules;
 
-import android.util.Log
-import okhttp3.*
-import okio.ByteString
-import java.io.File
-import java.io.FileWriter
-import java.util.concurrent.TimeUnit
+import android.util.Log;
+import okhttp3.*;
+import okio.ByteString;
+import java.io.File;
+import java.io.FileWriter;
+import java.util.concurrent.TimeUnit;
 
 class WebSocketSender(
     private val serverUrl: String,
@@ -14,6 +14,7 @@ class WebSocketSender(
 ) {
 
     private var webSocket: WebSocket? = null
+    private var isConnected: Boolean = false
     private val client: OkHttpClient = OkHttpClient.Builder()
         .pingInterval(30, TimeUnit.SECONDS)  // Отправка пинга каждые 30 секунд для поддержания соединения
         .build()
@@ -25,8 +26,21 @@ class WebSocketSender(
     private val handler = android.os.Handler(android.os.Looper.getMainLooper())
     private val sendRunnable = object : Runnable {
         override fun run() {
-            sendJsonFile()
-            handler.postDelayed(this, 20000) // Повтор через 5 минут
+            if (isConnected) {
+                sendJsonFile()
+            } else {
+                Log.w("WebSocketSender", "WebSocket не подключён. Отправка отменена.")
+            }
+            handler.postDelayed(this, 20000) // Повтор через 20 секунд
+        }
+    }
+
+    private val reconnectRunnable = object : Runnable {
+        override fun run() {
+            if (!isConnected) {
+                Log.d("WebSocketSender", "Попытка переподключения к WebSocket")
+                start()
+            }
         }
     }
 
@@ -38,6 +52,7 @@ class WebSocketSender(
     fun stop() {
         webSocket?.close(1000, "Closing connection")
         handler.removeCallbacks(sendRunnable)
+        handler.removeCallbacks(reconnectRunnable)
     }
 
     private fun sendJsonFile() {
@@ -59,6 +74,7 @@ class WebSocketSender(
 
     private inner class WebSocketListenerImpl : WebSocketListener() {
         override fun onOpen(webSocket: WebSocket, response: Response) {
+            isConnected = true
             Log.d("WebSocketSender", "WebSocket подключен")
         }
 
@@ -71,16 +87,20 @@ class WebSocketSender(
         }
 
         override fun onClosing(webSocket: WebSocket, code: Int, reason: String) {
+            isConnected = false
             Log.d("WebSocketSender", "WebSocket закрывается: Код=$code, Причина=$reason")
             webSocket.close(1000, null)
         }
 
         override fun onClosed(webSocket: WebSocket, code: Int, reason: String) {
+            isConnected = false
             Log.d("WebSocketSender", "WebSocket закрыт: Код=$code, Причина=$reason")
         }
 
         override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
+            isConnected = false
             Log.e("WebSocketSender", "Ошибка в WebSocket", t)
+            handler.postDelayed(reconnectRunnable, 60000) // Попытка переподключения через 1 минуту
         }
     }
 }
