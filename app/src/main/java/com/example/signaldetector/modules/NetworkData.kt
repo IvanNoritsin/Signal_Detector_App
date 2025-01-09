@@ -49,15 +49,15 @@ class NetworkData(
                         }
                         val cellIdentityLte = cellInfo.cellIdentity
 
-                        rsrpLte = cellSignalStrengthLte.rsrp
-                        rsrqLte = cellSignalStrengthLte.rsrq
-                        asuLevelLte = cellSignalStrengthLte.asuLevel
-                        levelLte = cellSignalStrengthLte.level
-                        operatorLte = cellIdentityLte.operatorAlphaShort.toString()
-                        mncLte = cellIdentityLte.mncString
-                        mccLte = cellIdentityLte.mccString
-
                         if (i == 0) {
+                            rsrpLte = cellSignalStrengthLte.rsrp
+                            rsrqLte = cellSignalStrengthLte.rsrq
+                            asuLevelLte = cellSignalStrengthLte.asuLevel
+                            levelLte = cellSignalStrengthLte.level
+                            operatorLte = cellIdentityLte.operatorAlphaShort.toString()
+                            mncLte = cellIdentityLte.mncString
+                            mccLte = cellIdentityLte.mccString
+
                             var interfaceApp = ""
                             interfaceApp += "Technology: LTE\n\n\n"
                             interfaceApp += "RSRP: $rsrpLte\n\n"
